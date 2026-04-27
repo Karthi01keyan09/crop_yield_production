@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌾 CropSense AI — Crop Yield Prediction System</title>
+  <meta name="description" content="AI-powered crop yield prediction using Random Forest and XGBoost. Get yield estimates, best crop suggestions, fertilizer tips, and irrigation plans for Indian agriculture." />
+  <meta name="keywords" content="crop yield prediction, Indian agriculture, machine learning, Random Forest, XGBoost, fertilizer recommendation" />
+
+  <!-- Fonts + Chart.js CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ══ TOP NAV ══════════════════════════════════════════════ -->
+  <nav class="top-nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="logo-icon" aria-hidden="true">🌾</div>
+      <div>
+        <h1>CropSense AI</h1>
+        <span class="sub">Crop Yield Prediction System</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="status-pill" id="api-status" role="status">
+        <div class="dot"></div>
+        <span class="status-text">Connecting…</span>
+      </div>
+      <div class="nav-time" id="nav-time" aria-live="polite">--:--:--</div>
+    </div>
+  </nav>
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar" role="complementary" aria-label="Sidebar navigation">
+    <div class="sidebar-section-label">Main</div>
+
+    <div class="nav-item active" data-page="predict" id="nav-predict" role="button" tabindex="0"
+         aria-label="Predict page" aria-current="page">
+      <span class="icon">🔮</span> Predict Yield
+    </div>
+
+    <div class="nav-item" data-page="dashboard" id="nav-dashboard" role="button" tabindex="0"
+         aria-label="Dashboard page">
+      <span class="icon">📊</span> Dashboard
+    </div>
+
+    <div class="nav-item" data-page="about" id="nav-about" role="button" tabindex="0"
+         aria-label="About page">
+      <span class="icon">ℹ️</span> About
+    </div>
+
+    <div class="sidebar-section-label" style="margin-top:auto">Dataset</div>
+    <div style="padding:12px 8px; font-size:12px; color:var(--text-muted); line-height:1.7">
+      📁 Indian Agriculture<br>
+      🌱 10 Major Crops<br>
+      🗺️ 10 States<br>
+      📊 5,000+ Records
+    </div>
+  </aside>
+
+  <!-- ══ MAIN CONTENT ═════════════════════════════════════════ -->
+  <main class="main-content" role="main">
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE: PREDICT
+         ══════════════════════════════════════════════════════ -->
+    <section id="page-predict" class="page active" aria-label="Yield Prediction">
+      <div class="page-header">
+        <h2>🔮 Predict Crop Yield</h2>
+        <p>Enter your farm parameters to get AI-powered yield estimates and crop recommendations.</p>
+      </div>
+
+      <form id="predict-form" novalidate>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">📍 Location & Season</div>
+          <div class="form-grid">
+
+            <div class="form-group">
+              <label for="f-state">State</label>
+              <select class="form-control" id="f-state" required aria-required="true">
+                <option value="" disabled selected>Select state…</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-season">Season</label>
+              <select class="form-control" id="f-season" required aria-required="true">
+                <option value="" disabled selected>Select season…</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-soil">Soil Type</label>
+              <select class="form-control" id="f-soil" required aria-required="true">
+                <option value="" disabled selected>Select soil type…</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-area">Farm Area</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-area" class="slider-control"
+                         min="0.5" max="20" step="0.5" value="5"
+                         aria-label="Farm area in hectares" />
+                  <span class="slider-val" id="f-area-val">5 ha</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">🌦️ Weather Conditions</div>
+          <div class="form-grid">
+
+            <div class="form-group">
+              <label for="f-rainfall">Rainfall</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-rainfall" class="slider-control"
+                         min="0" max="3000" step="10" value="800"
+                         aria-label="Annual rainfall in mm" />
+                  <span class="slider-val" id="f-rainfall-val">800 mm</span>
+                </div>
+                <div class="form-hint">Annual average rainfall</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="f-temp">Temperature</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-temp" class="slider-control"
+                         min="5" max="45" step="0.5" value="25"
+                         aria-label="Average temperature in Celsius" />
+                  <span class="slider-val" id="f-temp-val">25°C</span>
+                </div>
+                <div class="form-hint">Average growing season temp</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="f-humidity">Humidity</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-humidity" class="slider-control"
+                         min="20" max="100" step="1" value="65"
+                         aria-label="Relative humidity percentage" />
+                  <span class="slider-val" id="f-humidity-val">65%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="f-ph">Soil pH</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-ph" class="slider-control"
+                         min="4.0" max="9.5" step="0.1" value="7.0"
+                         aria-label="Soil pH level" />
+                  <span class="slider-val" id="f-ph-val">7.0</span>
+                </div>
+                <div class="form-hint">Optimal: 6.0 – 7.5</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">🌱 Inputs & Management</div>
+          <div class="form-grid">
+
+            <div class="form-group">
+              <label for="f-n">Nitrogen (N)</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-n" class="slider-control"
+                         min="0" max="200" step="1" value="60"
+                         aria-label="Nitrogen application in kg per hectare" />
+                  <span class="slider-val" id="f-n-val">60 kg/ha</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="f-p">Phosphorus (P)</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-p" class="slider-control"
+                         min="0" max="120" step="1" value="40"
+                         aria-label="Phosphorus application in kg per hectare" />
+                  <span class="slider-val" id="f-p-val">40 kg/ha</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="f-k">Potassium (K)</label>
+              <div class="slider-group">
+                <div class="slider-row">
+                  <input type="range" id="f-k" class="slider-control"
+                         min="0" max="120" step="1" value="40"
+                         aria-label="Potassium application in kg per hectare" />
+                  <span class="slider-val" id="f-k-val">40 kg/ha</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="f-fertilizer">Primary Fertilizer</label>
+              <select class="form-control" id="f-fertilizer" aria-label="Select primary fertilizer">
+                <option value="" disabled selected>Select…</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="f-irrigation">Irrigation Method</label>
+              <select class="form-control" id="f-irrigation" aria-label="Select irrigation method">
+                <option value="" disabled selected>Select…</option>
+              </select>
+            </div>
+
+          </div>
+
+          <button type="submit" class="btn-predict" id="btn-predict"
+                  aria-label="Run prediction">
+            🌾 Predict Yield &amp; Crop
+          </button>
+        </div>
+      </form>
+
+      <!-- ══ RESULTS ══════════════════════════════════════════ -->
+      <div id="results-section" class="results-section" aria-live="polite" aria-label="Prediction results">
+
+        <!-- Yield Hero -->
+        <div class="yield-hero">
+          <div class="yield-label">Predicted Yield</div>
+          <div class="yield-value" id="yield-value">—</div>
+          <div class="yield-unit">kg / hectare</div>
+          <div class="yield-tonnes" id="yield-tonnes">—</div>
+        </div>
+
+        <!-- Top Crops -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">🌿 Best Crop Recommendations</div>
+          <div class="crop-cards" id="crop-cards"></div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="rec-grid">
+          <div class="rec-card">
+            <h3>🧪 Fertilizer Plan</h3>
+            <div id="fert-recs"></div>
+          </div>
+          <div class="rec-card">
+            <h3>💧 Irrigation & Agronomy</h3>
+            <div id="irr-recs"></div>
+          </div>
+        </div>
+
+      </div><!-- /results-section -->
+    </section><!-- /page-predict -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE: DASHBOARD
+         ══════════════════════════════════════════════════════ -->
+    <section id="page-dashboard" class="page" aria-label="Dashboard">
+      <div class="page-header">
+        <h2>📊 Insights Dashboard</h2>
+        <p>Dataset-level analytics across crops, states, seasons, soil types, and rainfall.</p>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-icon">📁</span>
+          <div class="stat-value" id="dash-total">—</div>
+          <div class="stat-label">Total Records</div>
+          <div class="stat-trend">Indian Ag. Dataset</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">🌾</span>
+          <div class="stat-value" id="dash-avg-yield">—</div>
+          <div class="stat-label">Avg Yield (kg/ha)</div>
+          <div class="stat-trend">Across all crops</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">🏆</span>
+          <div class="stat-value" id="dash-top-crop">—</div>
+          <div class="stat-label">Highest Yielding Crop</div>
+          <div class="stat-trend">By avg kg/ha</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">🤖</span>
+          <div class="stat-value">RF + XGB</div>
+          <div class="stat-label">ML Models</div>
+          <div class="stat-trend">Random Forest · XGBoost</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">🌾 Avg Yield by Crop</div>
+          <canvas id="chart-crop" height="240" aria-label="Bar chart showing average yield by crop"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🗺️ Avg Yield by State</div>
+          <canvas id="chart-state" height="240" aria-label="Horizontal bar chart showing average yield by state"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📅 Yield by Season</div>
+          <canvas id="chart-season" height="220" aria-label="Doughnut chart showing yield by season"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🪵 Yield by Soil Type</div>
+          <canvas id="chart-soil" height="220" aria-label="Radar chart showing yield by soil type"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:24px">
+        <div class="chart-title">🌧️ Yield vs Rainfall (mm)</div>
+        <canvas id="chart-rainfall" height="160" aria-label="Line chart showing average yield versus rainfall"></canvas>
+      </div>
+
+    </section><!-- /page-dashboard -->
+
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE: ABOUT
+         ══════════════════════════════════════════════════════ -->
+    <section id="page-about" class="page" aria-label="About">
+      <div class="page-header">
+        <h2>ℹ️ About CropSense AI</h2>
+        <p>An end-to-end machine learning system for Indian agriculture yield prediction.</p>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <span class="info-icon">🤖</span>
+          <h3>ML Models</h3>
+          <p>Random Forest regressor predicts yield (kg/ha) with low MAE. XGBoost classifier recommends the best crop with high accuracy.</p>
+          <div class="tech-badges">
+            <span class="tech-badge">Random Forest</span>
+            <span class="tech-badge">XGBoost</span>
+            <span class="tech-badge">scikit-learn</span>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <span class="info-icon">🌾</span>
+          <h3>Dataset</h3>
+          <p>Synthetic dataset inspired by Indian agriculture patterns. Covers 10 major crops, 10 states, 3 seasons, 7 soil types across 5,000 records.</p>
+          <div class="tech-badges">
+            <span class="tech-badge">Kaggle-style</span>
+            <span class="tech-badge">Indian Agri</span>
+            <span class="tech-badge">5,000 rows</span>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <span class="info-icon">🔧</span>
+          <h3>Tech Stack</h3>
+          <p>Flask REST API backend with CORS. Vanilla HTML/CSS/JS frontend. Chart.js for rich visualisations. Auto model training on first run.</p>
+          <div class="tech-badges">
+            <span class="tech-badge">Flask</span>
+            <span class="tech-badge">Python 3.10+</span>
+            <span class="tech-badge">Chart.js 4</span>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <span class="info-icon">📊</span>
+          <h3>Features</h3>
+          <p>Yield prediction · Best crop recommendation · Fertilizer NPK plan · Irrigation strategy · Dataset insights dashboard.</p>
+          <div class="tech-badges">
+            <span class="tech-badge">Yield Pred.</span>
+            <span class="tech-badge">Crop Rec.</span>
+            <span class="tech-badge">Fert. Tips</span>
+            <span class="tech-badge">Irrigation</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input features table -->
+      <div class="card">
+        <div class="card-title">📥 Input Features</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse; font-size:13px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--card-border)">
+                <th style="text-align:left; padding:10px 12px; color:var(--text-muted)">Feature</th>
+                <th style="text-align:left; padding:10px 12px; color:var(--text-muted)">Type</th>
+                <th style="text-align:left; padding:10px 12px; color:var(--text-muted)">Range / Values</th>
+                <th style="text-align:left; padding:10px 12px; color:var(--text-muted)">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">State</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Categorical</td>
+                <td style="padding:10px 12px">10 Indian states</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Geographic location</td>
+              </tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">Season</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Categorical</td>
+                <td style="padding:10px 12px">Kharif / Rabi / Zaid</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Cropping season</td>
+              </tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">Soil Type</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Categorical</td>
+                <td style="padding:10px 12px">7 soil types</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Physical soil classification</td>
+              </tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">Rainfall_mm</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Numeric</td>
+                <td style="padding:10px 12px">0 – 3000 mm</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Annual/seasonal rainfall</td>
+              </tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">Temperature_C</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Numeric</td>
+                <td style="padding:10px 12px">5 – 45 °C</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Average growing temp</td>
+              </tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">Humidity_pct</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Numeric</td>
+                <td style="padding:10px 12px">20 – 100 %</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Relative humidity</td>
+              </tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">pH</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Numeric</td>
+                <td style="padding:10px 12px">4.0 – 9.5</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Soil acidity / alkalinity</td>
+              </tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)">
+                <td style="padding:10px 12px; color:var(--green-400)">N / P / K</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Numeric</td>
+                <td style="padding:10px 12px">0 – 200 kg/ha</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Macronutrient inputs</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px; color:var(--green-400)">Irrigation</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Categorical</td>
+                <td style="padding:10px 12px">Drip / Sprinkler / Flood / Rain-fed</td>
+                <td style="padding:10px 12px; color:var(--text-muted)">Water delivery method</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section><!-- /page-about -->
+
+  </main><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<!-- Toast Container -->
+<div id="toast-container" class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- App Script -->
+<script src="js/app.js"></script>
+</body>
+</html>
